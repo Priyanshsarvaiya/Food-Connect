@@ -85,7 +85,7 @@ const DonorDashboard = () => {
                   <span className="ml-2 text-sm font-medium text-gray-700">
                     {(() => {
                       const profile = localStorage.getItem('foodConnectProfile');
-                      return profile ? JSON.parse(profile).name : 'City Bakery';
+                      return profile ? JSON.parse(profile).name : '<Profile>';
                     })()}
                   </span>
                   <svg className="ml-1 h-5 w-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">

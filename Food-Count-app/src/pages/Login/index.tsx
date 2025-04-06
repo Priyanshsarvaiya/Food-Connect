@@ -23,7 +23,7 @@ const Login = () => {
     console.log('user', user);
     if (isAuthenticated && user) {
       if (user.accountType === 'donor') {
-        navigate('/donor/profile');
+        navigate('/donor/dashboard');
       } else if (user.accountType === 'recipient') {
         navigate('/recipient/profile'); // make sure you add this route
       }

@@ -98,7 +98,7 @@ const Signup = () => {
       <div className="min-h-screen w-full bg-green-50 flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-md p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Verify Your Email</h1>
+            <h1 className="text-black text-3xl font-bold mb-2">Verify Your Email</h1>
             <p className="text-gray-600">
               We've sent a verification code to {emailToVerify}. Please enter it below.
             </p>
