@@ -7,16 +7,18 @@ const NewListing = () => {
     title: '',
     organization: '',
     location: '',
-    duration: 2,
-    tags: [],
-    status: 'Available',
+    quantity: 1,
+    dietaryRestrictions: '',
     description: '',
-    image: '',
-    reservations: 0
+    availabilityStatus: 'Available',
+    expirationDate: '',
+    image: null
   });
 
   const [tagInput, setTagInput] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   // Get organization name from profile if available
   useEffect(() => {
@@ -29,6 +31,14 @@ const NewListing = () => {
         location: profile.address || ''
       }));
     }
+    
+    // Set default expiration date to 24 hours from now
+    const tomorrow = new Date();
+    tomorrow.setHours(tomorrow.getHours() + 24);
+    setListing(prev => ({
+      ...prev,
+      expirationDate: tomorrow.toISOString().slice(0, 16) // Format: YYYY-MM-DDTHH:mm
+    }));
   }, []);
 
   const handleChange = (e) => {
@@ -44,26 +54,33 @@ const NewListing = () => {
       const file = e.target.files[0];
       setListing(prev => ({
         ...prev,
-        image: URL.createObjectURL(file)
+        image: file // Store the actual file object
       }));
       setPreviewImage(URL.createObjectURL(file));
     }
   };
 
   const addTag = () => {
-    if (tagInput.trim() && !listing.tags.includes(tagInput.trim())) {
+    if (tagInput.trim() && !listing.dietaryRestrictions.includes(tagInput.trim())) {
+      const newRestrictions = listing.dietaryRestrictions 
+        ? `${listing.dietaryRestrictions}, ${tagInput.trim()}`
+        : tagInput.trim();
+      
       setListing(prev => ({
         ...prev,
-        tags: [...prev.tags, tagInput.trim()]
+        dietaryRestrictions: newRestrictions
       }));
       setTagInput('');
     }
   };
 
   const removeTag = (tagToRemove) => {
+    const tags = listing.dietaryRestrictions.split(',').map(tag => tag.trim());
+    const updatedTags = tags.filter(tag => tag !== tagToRemove).join(', ');
+    
     setListing(prev => ({
       ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
+      dietaryRestrictions: updatedTags
     }));
   };
 
@@ -74,26 +91,66 @@ const NewListing = () => {
     }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+// In handleSubmit function
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  setIsSubmitting(true);
+  
+  try {
+    // Validate image is present
+    if (!listing.image) {
+      setError('Please upload an image for your listing');
+      setIsSubmitting(false);
+      return;
+    }
     
-    // Generate a unique ID
-    const newId = Date.now();
-    const newListing = {
-      ...listing,
-      id: newId
-    };
+    // Create FormData object
+    const formData = new FormData();
+    formData.append('title', listing.title);
+    formData.append('quantity', String(listing.quantity));
+    formData.append('description', listing.description);
+    formData.append('dietaryRestrictions', listing.dietaryRestrictions);
+    formData.append('location', listing.location);
+    formData.append('availabilityStatus', listing.availabilityStatus);
     
-    // Get existing listings from localStorage or initialize empty array
-    const existingListings = JSON.parse(localStorage.getItem('foodConnectListings') || '[]');
+    // Format expiration date as ISO string
+    const expirationDate = new Date(listing.expirationDate);
+    formData.append('expirationDate', expirationDate.toISOString());
     
-    // Add new listing and save back to localStorage
-    const updatedListings = [...existingListings, newListing];
-    localStorage.setItem('foodConnectListings', JSON.stringify(updatedListings));
+    // Append image - critical: use the correct field name expected by backend
+    formData.append('images', listing.image);
     
-    // Navigate back to dashboard
+    // Make API request
+    const response = await fetch('http://localhost:5000/api/food-posts', {
+      method: 'POST',
+      credentials: 'include', // Critical: Include HTTP-only cookies for auth
+      body: formData
+      // Don't set Content-Type header - browser will set boundary automatically
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Error ${response.status}: Failed to create listing`);
+    }
+    
+    const data = await response.json();
+    
+    // Redirect on success
     navigate('/donor/dashboard');
-  };
+    
+  } catch (err) {
+    console.error('Error creating listing:', err);
+    setError(err.message || 'Failed to create listing. Please try again.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+  // Get dietary restrictions as array for display
+  const dietaryTags = listing.dietaryRestrictions 
+    ? listing.dietaryRestrictions.split(',').map(tag => tag.trim()).filter(tag => tag)
+    : [];
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -125,11 +182,26 @@ const NewListing = () => {
             <p className="text-green-100 mt-1">Share your available food with those in need</p>
           </div>
           
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 mt-4 mx-6">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-700">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="p-6">
             <div className="grid grid-cols-1 gap-6">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Listing Title
+                  Listing Title*
                 </label>
                 <input
                   type="text"
@@ -153,7 +225,6 @@ const NewListing = () => {
                   name="organization"
                   value={listing.organization}
                   onChange={handleChange}
-                  required
                   placeholder="Your organization or business name"
                   className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 />
@@ -161,7 +232,7 @@ const NewListing = () => {
 
               <div>
                 <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-                  Pickup Location
+                  Pickup Location*
                 </label>
                 <input
                   type="text"
@@ -174,28 +245,44 @@ const NewListing = () => {
                   className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 />
               </div>
-
-              <div>
-                <label htmlFor="duration" className="block text-sm font-medium text-gray-700 mb-1">
-                  Available For (hours)
-                </label>
-                <input
-                  type="number"
-                  id="duration"
-                  name="duration"
-                  value={listing.duration}
-                  onChange={handleChange}
-                  min="1"
-                  max="24"
-                  required
-                  placeholder="Example: 36"
-                  className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="quantity" className="block text-sm font-medium text-gray-700 mb-1">
+                    Quantity*
+                  </label>
+                  <input
+                    type="number"
+                    id="quantity"
+                    name="quantity"
+                    value={listing.quantity}
+                    onChange={handleChange}
+                    min="1"
+                    required
+                    placeholder="Example: 10"
+                    className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="expirationDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Expiration Date/Time*
+                  </label>
+                  <input
+                    type="datetime-local"
+                    id="expirationDate"
+                    name="expirationDate"
+                    value={listing.expirationDate}
+                    onChange={handleChange}
+                    required
+                    className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
+                  />
+                </div>
               </div>
 
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
+                  Description*
                 </label>
                 <textarea
                   id="description"
@@ -203,6 +290,7 @@ const NewListing = () => {
                   value={listing.description}
                   onChange={handleChange}
                   rows={3}
+                  required
                   placeholder="Describe what you're offering, quantity, etc."
                   className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
                 ></textarea>
@@ -210,7 +298,7 @@ const NewListing = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tags
+                  Dietary Restrictions/Tags
                 </label>
                 <div className="flex items-center">
                   <input
@@ -218,7 +306,7 @@ const NewListing = () => {
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Add food categories (e.g. Bread, Vegetables)"
+                    placeholder="Add dietary info (e.g. Vegetarian, Gluten-Free)"
                     className="text-black block w-full rounded-md border-gray-300 shadow-sm focus:ring-green-500 focus:border-green-500 sm:text-sm"
                   />
                   <button
@@ -230,9 +318,9 @@ const NewListing = () => {
                   </button>
                 </div>
 
-                {listing.tags.length > 0 && (
+                {dietaryTags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {listing.tags.map((tag) => (
+                    {dietaryTags.map((tag) => (
                       <span
                         key={tag}
                         className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-green-100 text-green-800"
@@ -260,7 +348,7 @@ const NewListing = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Upload Image
+                  Upload Image* <span className="text-red-500">(Required)</span>
                 </label>
                 <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                   <div className="space-y-1 text-center">
@@ -314,9 +402,12 @@ const NewListing = () => {
                 </Link>
                 <button
                   type="submit"
-                  className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                  disabled={isSubmitting}
+                  className={`inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
+                    isSubmitting ? 'bg-green-400' : 'bg-green-600 hover:bg-green-700'
+                  } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500`}
                 >
-                  Create Listing
+                  {isSubmitting ? 'Creating...' : 'Create Listing'}
                 </button>
               </div>
             </div>
