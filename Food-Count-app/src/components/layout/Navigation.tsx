@@ -1,56 +1,68 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Bell, LogOut, Heart, Search } from 'lucide-react';
+import useAuthStore from '../../store/authStore';
 
 const Navigation = () => {
-  const location = useLocation();
-  const isLoggedIn = false; // This would normally come from auth context/state
-
+  const { logout, user } = useAuthStore();
+  
+  // Determine dashboard path based on account type
+  const dashboardPath = user?.accountType === 'donor' ? '/donor/dashboard' : '/recipient/dashboard';
+  
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity duration-150">
-          <img className="w-6 h-6 text-green-500" src='/foodconnect_logo.png'/>
-          <span className="ml-2 text-xl font-semibold text-black ">FoodConnect</span>
-        </Link>
+    <header className="bg-white shadow-sm py-3 px-4 fixed top-0 left-0 right-0 z-50 border-b border-gray-200">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <div className="flex items-center">
+          <Link to={dashboardPath} className="flex items-center hover:opacity-80 transition-opacity duration-150">
+            <img className="w-6 h-6 text-green-500" src='/foodconnect_logo.png'/>
+            <span className="ml-2 text-xl font-semibold text-black ">FoodConnect</span>
+          </Link>
+        </div>
         
-        {isLoggedIn ? (
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <Link to="/notifications" className="text-gray-600 hover:text-gray-900">
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">1</span>
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </Link>
+        <div className="flex-1 max-w-2xl mx-8 hidden md:block">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="w-5 h-5 text-gray-400" />
             </div>
-            <div className="flex items-center">
-              <img 
-                src="/api/placeholder/40/40" 
-                alt="User profile" 
-                className="w-8 h-8 rounded-full"
-              />
-              <svg className="w-4 h-4 ml-1 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+            <input 
+              type="search" 
+              className="block w-full p-2 pl-10 pr-4 rounded-md border border-gray-300 focus:ring-green-500 focus:border-green-500" 
+              placeholder="Search for available food..." 
+            />
           </div>
-        ) : (
-          <div className="flex items-center gap-4">
-            <Link 
-              to="/login" 
-              className={`!text-black hover:text-gray-900 font-semibold ${location.pathname === '/login' ? 'text-black' : 'text-gray-800 hover:text-black transition-colors duration-150'}`}
-            >
-              Sign In
-            </Link>
-            <Link 
-              to="/signup" 
-              className={`bg-green-500 !text-white px-4 py-2 rounded-md hover:bg-green-600 hover:bg-opacity-90 transition-colors duration-150 ${location.pathname === '/signup' ? 'bg-green-600' : ''}`}
-            >
-              Register
+        </div>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Link to="/notifications" className="p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                1
+              </span>
+              <Bell className="w-6 h-6" />
             </Link>
           </div>
-        )}
+          
+          <div className="flex items-center gap-2">
+            <img 
+              src={user?.avatarUrl || "https://via.placeholder.com/150?text=User"} 
+              alt={user?.name || "User"} 
+              className="w-8 h-8 rounded-full object-cover"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://via.placeholder.com/150?text=User";
+              }}
+            />
+            <span className="text-sm font-medium hidden md:block">{user?.name || "User"}</span>
+          </div>
+          
+          <button 
+            onClick={logout}
+            className="p-1 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 hidden md:block"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
       </div>
-    </nav>
+    </header>
   );
 };
 

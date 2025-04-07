@@ -1,11 +1,30 @@
 import { Outlet } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import Navigation from './Navigation';
+import SimpleNav from './SimpleNav';
+import useAuthStore from '../../store/authStore';
+import { useEffect, useState } from 'react';
+import LoadingSpinner from '../shared/LoadingSpinner';
 
 const Layout = () => {
+  const { isAuthenticated, isCheckingAuth } = useAuthStore();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Only set loading to false after initial auth check is complete
+    if (!isCheckingAuth) {
+      setIsLoading(false);
+    }
+  }, [isCheckingAuth]);
+
+  // Show loading spinner while checking auth state
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Navigation />
+      {isAuthenticated ? <Navigation /> : <SimpleNav />}
       
       <main className="flex-grow">
         <Outlet />

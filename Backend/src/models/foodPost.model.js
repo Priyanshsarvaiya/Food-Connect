@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS food_posts (
     image_url TEXT[],
     dietary_restrictions TEXT,
     location TEXT NOT NULL,
+    latitude DECIMAL(9,6),
+    longitude DECIMAL(9,6),
     availability_status VARCHAR(50) NOT NULL,
     expiration_date TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -44,7 +46,15 @@ const FoodPost = {
         expirationDate,
                  }) {
         try {
+            // geocode api key
+            const GEOCODE_API_KEY = process.env.GEOCODE_API_KEY;
             const createdAt = new Date();
+            // Fetch the latitude and longitude of the location, using api
+            const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${location}&key=${GEOCODE_API_KEY}&language=en&pretty=1`);
+            const data = await response.json();
+            const latitude = data.results[0].bounds.northeast.lat;
+            const longitude = data.results[0].bounds.northeast.lng;
+
             const { rows } = await client.query(`
                 INSERT INTO food_posts (
                     user_id,
@@ -54,11 +64,13 @@ const FoodPost = {
                     image_url,
                     dietary_restrictions,
                     location,
+                    latitude,
+                    longitude,
                     availability_status,
                     expiration_date,
                     created_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING *;
             `, [
                 userId,
@@ -68,6 +80,8 @@ const FoodPost = {
                 imageUrl,
                 dietaryRestrictions,
                 location,
+                latitude,
+                longitude,
                 availabilityStatus,
                 expirationDate,
                 createdAt
@@ -137,6 +151,13 @@ const FoodPost = {
         expirationDate,
     }) {
         try {
+            const GEOCODE_API_KEY = process.env.GEOCODE_API_KEY;
+            const createdAt = new Date();
+            // Fetch the latitude and longitude of the location, using api
+            const response = await fetch(`https://api.opencagedata.com/geocode/v1/json?q=${location}&key=${GEOCODE_API_KEY}&language=en&pretty=1`);
+            const data = await response.json();
+            const latitude = data.results[0].bounds.northeast.lat;
+            const longitude = data.results[0].bounds.northeast.lng;
             const { rows } = await client.query(`
                 UPDATE food_posts SET
                     title = $1,
@@ -145,11 +166,13 @@ const FoodPost = {
                     image_url = $4,
                     dietary_restrictions = $5,
                     location = $6,
-                    availability_status = $7,
-                    expiration_date = $8
-                WHERE id = $9
+                    latitude = $7,
+                    longitude = $8,
+                    availability_status = $9,
+                    expiration_date = $10
+                WHERE id = $11
                 RETURNING *;
-            `, [title, quantity, description, imageUrl, dietaryRestrictions, location, availabilityStatus, expirationDate, id]);
+            `, [title, quantity, description, imageUrl, dietaryRestrictions, location, latitude, longitude, availabilityStatus, expirationDate, id]);
             return toCamelCase(rows[0]);
         }
         catch (error) {

@@ -18,52 +18,108 @@ import RecipientReservations from "./pages/Recipient/RecipientReservations";
 import Message from "./pages/Message";
 import useAuthStore from "./store/authStore";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
-import { Children, useEffect } from "react";
+import { Children, useEffect, ReactNode } from "react";
 
-// import RecipientProfile from './pages/Recipient/RecipientProfile'; for prianish when hes done his page
-
-// Protected routes
-const ProtectedRoute = ({ children }) => {
+// Protected routes - if the user is not authenticated, they will be redirected to the login page
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
   const { isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
-    return <Navigate to="login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return children;
 };
 
 const App = () => {
+  // check the auth state
   const { isCheckingAuth, checkAuth } = useAuthStore();
 
-  useEffect(()=>{
-    checkAuth();
-  }, [checkAuth])
 
-  // if(isCheckingAuth) return <LoadingSpinner/>;
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (isCheckingAuth) return <LoadingSpinner />;
 
   return (
     <Router>
       <Routes>
-        <Route path="/" element={
-         
-            <Layout />
-         
-          }>
+        <Route path="/" element={<Layout />}>
+          {/* Public routes */}
           <Route index element={<Landing />} />
           <Route path="signup" element={<Signup />} />
           <Route path="login" element={<Login />} />
-          <Route path="/donor/dashboard" element={<DonorDashboard />} />
-          <Route path="/donor/profile" element={<EditProfile />} />
-          <Route path="/donor/newlisting" element={<NewListing />} />
-          <Route path="/editlistings/:id" element={<EditListing />} />
-          <Route path="/recipient/dashboard" element={<RecipientDashboard />} />
-          <Route path="/recipient/profile" element={<RecipientProfile />} />
+
+          {/* Protected donor routes */}
+          <Route
+            path="/donor/dashboard"
+            element={
+              <ProtectedRoute>
+                <DonorDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/donor/profile"
+            element={
+              <ProtectedRoute>
+                <EditProfile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/donor/newlisting"
+            element={
+              <ProtectedRoute>
+                <NewListing />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/editlistings/:id"
+            element={
+              <ProtectedRoute>
+                <EditListing />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected recipient routes */}
+          <Route
+            path="/recipient/dashboard"
+            element={
+              <ProtectedRoute>
+                <RecipientDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/recipient/profile"
+            element={
+              <ProtectedRoute>
+                <RecipientProfile />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/recipient/reservations"
-            element={<RecipientReservations />}
+            element={
+              <ProtectedRoute>
+                <RecipientReservations />
+              </ProtectedRoute>
+            }
           />
-          <Route path="/message/:receiverId" element={<Message />} />
+
+          {/* Protected message route */}
+          <Route
+            path="/message/:receiverId"
+            element={
+              <ProtectedRoute>
+                <Message />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
     </Router>

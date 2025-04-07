@@ -49,7 +49,6 @@ async function handleImageUpload(req) {
       const signedParams = {
         Bucket: process.env.AWS_BUCKET_NAME,
         Key: s3Response.Key,
-        Expires: 60 * 5, // URL expiration time (5 minutes. Change accordingly)
       };
 
       // get the signed url

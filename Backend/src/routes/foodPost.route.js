@@ -23,7 +23,7 @@ router.get('/', verifyToken, getFoodPosts);
 // get post by id
 router.get('/:id', verifyToken, getFoodPost);
 // create new post
-router.post('/', upload.array('images'), createFoodPost);
+router.post('/', upload.array('images'), verifyToken, createFoodPost);
 // update existing post
 router.put('/:id', verifyToken, updateFoodPost);
 // delete a post
